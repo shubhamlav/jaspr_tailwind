@@ -1,3 +1,22 @@
+## 0.3.7
+
+- Builder identity unchanged — a drop-in upgrade.
+- Source globs are injected as absolute `@source` directives appended to the
+  stylesheet, replacing `--content`/`--config` and the `@tailwind` directives,
+  all removed in v4.
+- Requires the v4 CLI and `@import "tailwindcss";` in the entry stylesheet;
+  input still using the v3 `@tailwind` directives fails the size floor.
+- The `Process.run` result is checked: exit code, output existence and
+  stdout/stderr. In 0.3.6 the result was discarded, so every Tailwind failure
+  was silent.
+- Output must be at least 1 KiB (`minOutputBytes`): v4 exits 0 on a stylesheet
+  it does not understand, emitting only its licence banner.
+- `canRead` covers `content/**/*.{md,yaml}`, so Markdown and YAML edits
+  invalidate the CSS.
+- Dropped `build_modules` (scratch space unused) and `build_runner` (no codegen).
+- `build`: `^4.0.0` → `^4.0.7`; 4.0.8+ needs `analyzer >=13.3.0` but
+  `jaspr_builder` pins `^12.1.0`, so consuming projects fail to resolve.
+
 ## 0.3.6
 
 - Transfer ownership
