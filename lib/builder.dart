@@ -19,6 +19,12 @@ final _versionCache = Resource<Map<String, Future<int?>>>(
   () => <String, Future<int?>>{},
 );
 
+/// build_runner keeps a failed step's result until one of its inputs changes,
+/// and the CLI itself is not a build input.
+const _retryHint =
+    'After fixing this, save a Dart or CSS file, or run '
+    '`dart run build_runner clean`, to build again.';
+
 const _configNames = [
   'tailwind.config.js',
   'tailwind.config.cjs',
@@ -51,6 +57,10 @@ class TailwindBuilder implements Builder {
     final inputId = buildStep.inputId;
     final outputId = inputId.changeExtension('').changeExtension('.css');
 
+    // Record inputs before any check can stop this step: build_runner reruns a
+    // failed step only when one of its recorded inputs changes.
+    await _trackSources(buildStep);
+
     final root = await packageRootOf(inputId.package, Directory.current);
     if (root == null) {
       log.severe(
@@ -75,7 +85,8 @@ class TailwindBuilder implements Builder {
         '  - put the standalone tailwindcss binary on PATH: '
         'https://tailwindcss.com/blog/standalone-cli\n'
         '  - set the `cli` option in build.yaml to npx, standalone, or the '
-        'path of a Tailwind CLI',
+        'path of a Tailwind CLI\n'
+        '$_retryHint',
       );
       return;
     }
@@ -99,7 +110,8 @@ class TailwindBuilder implements Builder {
     } else if (major < 4) {
       log.severe(
         'jaspr_tailwind needs Tailwind CSS v4; `$cli` is v$major. '
-        'Install Tailwind CSS v4 or point the `cli` option at it.',
+        'Install Tailwind CSS v4 or point the `cli` option at it. '
+        '$_retryHint',
       );
       return;
     }
@@ -125,28 +137,20 @@ class TailwindBuilder implements Builder {
     }
     if (!hasConfigDirective(css)) _warnIgnoredConfig(root, input);
 
-    await _trackSources(buildStep);
-
     final tempDir = await Directory.systemTemp.createTemp('jaspr_tailwind_');
     try {
       final output = File(p.join(tempDir.path, 'out.css'));
       final ProcessResult result;
       try {
-        result = await Process.run(
-          cli.executable,
-          [
-            ...cli.leadingArgs,
-            '-i',
-            input,
-            '-o',
-            output.path,
-            ...splitCliOptions(options.config['tailwindcss']),
-            '--cwd',
-            root,
-          ],
-          workingDirectory: root,
-          runInShell: Platform.isWindows,
-        );
+        result = await _run(cli, [
+          '-i',
+          input,
+          '-o',
+          output.path,
+          ...splitCliOptions(options.config['tailwindcss']),
+          '--cwd',
+          root,
+        ], root);
       } on ProcessException catch (e) {
         log.severe('Cannot run the Tailwind CSS CLI `$cli`: ${e.message}');
         return;
@@ -181,7 +185,7 @@ class TailwindBuilder implements Builder {
   /// CSS files built by this builder are skipped: reading an output of this
   /// builder from one of its own steps is a dependency cycle.
   Future<void> _trackSources(BuildStep buildStep) async {
-    final css = await buildStep.findAssets(Glob('web/**.css')).toList();
+    final css = await buildStep.findAssets(Glob('{lib,web}/**.css')).toList();
     final entrypoints = {
       for (final asset in css)
         if (asset.path.endsWith('.tw.css')) asset.path,
@@ -217,13 +221,17 @@ class TailwindBuilder implements Builder {
 String _entrypointFor(String cssPath) =>
     '${cssPath.substring(0, cssPath.length - '.css'.length)}.tw.css';
 
-Future<int?> _probeMajorVersion(TailwindCli cli, String root) async {
-  final result = await Process.run(
-    cli.executable,
-    [...cli.leadingArgs, '--help'],
-    workingDirectory: root,
-    runInShell: Platform.isWindows,
+Future<ProcessResult> _run(TailwindCli cli, List<String> args, String root) {
+  final (executable, arguments) = commandLine(
+    cli,
+    args,
+    isWindows: Platform.isWindows,
   );
+  return Process.run(executable, arguments, workingDirectory: root);
+}
+
+Future<int?> _probeMajorVersion(TailwindCli cli, String root) async {
+  final result = await _run(cli, ['--help'], root);
   return parseTailwindMajorVersion('${result.stdout}\n${result.stderr}');
 }
 

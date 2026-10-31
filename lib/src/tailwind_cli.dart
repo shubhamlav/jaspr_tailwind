@@ -56,6 +56,21 @@ TailwindCli? resolveTailwindCli({
   return null;
 }
 
+/// The program and arguments that run [cli] with [args].
+///
+/// On Windows the command goes through `cmd.exe /d /c call`, which runs npm's
+/// `.cmd` shims. With `call` first, the command line does not start with a
+/// quote, so `cmd` keeps the quotes around paths that contain spaces.
+(String, List<String>) commandLine(
+  TailwindCli cli,
+  List<String> args, {
+  required bool isWindows,
+}) {
+  final command = [...cli.leadingArgs, ...args];
+  if (!isWindows) return (cli.executable, command);
+  return ('cmd.exe', ['/d', '/c', 'call', cli.executable, ...command]);
+}
+
 final _ansiEscape = RegExp(r'\x1B\[[0-9;]*m');
 final _versionLine = RegExp(r'tailwindcss v(\d+)\.');
 

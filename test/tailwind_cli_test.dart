@@ -76,6 +76,31 @@ void main() {
     });
   });
 
+  group('commandLine', () {
+    const npm = TailwindCli(
+      r'C:\Users\Jane Doe\site\node_modules\.bin\tailwindcss.cmd',
+    );
+
+    test('runs the CLI directly off Windows', () {
+      final (executable, args) = commandLine(
+        const TailwindCli('npx', ['--yes', '@tailwindcss/cli']),
+        ['-i', 'in.css'],
+        isWindows: false,
+      );
+      expect(executable, 'npx');
+      expect(args, ['--yes', '@tailwindcss/cli', '-i', 'in.css']);
+    });
+
+    test('starts cmd with call first on Windows', () {
+      final (executable, args) = commandLine(npm, [
+        '-i',
+        'in.css',
+      ], isWindows: true);
+      expect(executable, 'cmd.exe');
+      expect(args, ['/d', '/c', 'call', npm.executable, '-i', 'in.css']);
+    });
+  });
+
   group('parseTailwindMajorVersion', () {
     test('v4 help', () {
       expect(parseTailwindMajorVersion('≈ tailwindcss v4.3.3\n'), 4);
