@@ -8,6 +8,8 @@ Breaking:
 - The builder no longer passes `--content` or `--config`. Load a
   `tailwind.config.js` with `@config` from the stylesheet; the build warns when
   a config file is not loaded.
+- The `tailwindcss` option is split on spaces into separate CLI arguments (a
+  YAML list also works). 0.3.6 passed it as a single argument.
 - Requires Dart 3.7 or later.
 
 Fixed:
@@ -18,8 +20,9 @@ Fixed:
 - Tailwind CSS v4 builds no longer produce an empty stylesheet.
 - The CLI runs on the stylesheet inside the project, so relative `@import` and
   `@source` paths and `@plugin "daisyui"` resolve.
-- A missing CLI, a CLI error, or output with no CSS rules fails the build with
-  the CLI's output, instead of passing silently.
+- A missing CLI fails the build with install steps. A CLI error fails it with
+  the CLI's stdout and stderr, and output with no CSS rules fails it too. Before,
+  these passed silently or surfaced as a `PathNotFoundException`.
 
 Added:
 
@@ -28,7 +31,7 @@ Added:
 - `cli` option: `npx`, `standalone`, or the path of a Tailwind CLI.
 - `dart run build_runner build --workspace` support: the package root comes
   from the package config.
-- Rebuilds when CSS files in `web/` or files in `content/` change.
+- Rebuilds when CSS files in `lib/` or `web/`, or files in `content/`, change.
 
 Thanks to @ekrem-qb (#8), @lukehutch (#14), @Markzipan (#18), and @Dimoshka
 (#20), whose pull requests found these problems and shaped this release.
