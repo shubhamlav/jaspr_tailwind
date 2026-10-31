@@ -15,6 +15,27 @@ void main() {
       expect(usesV3Directives('@tailwind utilities;'), isFalse);
     });
 
+    test('commented-out directive is not v3', () {
+      expect(
+        usesV3Directives('/* was: @tailwind base; */\n@import "tailwindcss";'),
+        isFalse,
+      );
+    });
+
+    test('directive beside the v4 import is not v3', () {
+      expect(
+        usesV3Directives('@import "tailwindcss";\n@tailwind base;'),
+        isFalse,
+      );
+    });
+
+    test('directive beside a single-quoted v4 import is not v3', () {
+      expect(
+        usesV3Directives("@import 'tailwindcss' prefix(tw);\n@tailwind base;"),
+        isFalse,
+      );
+    });
+
     test('v4 import is not v3', () {
       expect(usesV3Directives('@import "tailwindcss";'), isFalse);
     });
@@ -23,6 +44,13 @@ void main() {
   group('hasConfigDirective', () {
     test('hasConfigDirective', () {
       expect(hasConfigDirective('@config "../tailwind.config.js";'), isTrue);
+    });
+
+    test('commented-out directive does not count', () {
+      expect(
+        hasConfigDirective('/* @config "../tailwind.config.js"; */'),
+        isFalse,
+      );
     });
 
     test('no directive', () {
