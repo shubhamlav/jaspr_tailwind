@@ -50,7 +50,7 @@ void main() {
     });
 
     test('standalone off PATH is null', () {
-      expect(resolve(cli: 'standalone', onPath: false), isNull);
+      expect(resolve(cli: 'standalone'), isNull);
     });
 
     test('local bin wins over PATH', () {
@@ -72,7 +72,7 @@ void main() {
     });
 
     test('nothing found', () {
-      expect(resolve(onPath: false), isNull);
+      expect(resolve(), isNull);
     });
   });
 
