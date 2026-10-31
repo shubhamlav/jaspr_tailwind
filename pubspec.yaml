@@ -1,8 +1,8 @@
 name: jaspr_tailwind
 description: Tailwind integration for Jaspr.
-version: 0.3.6
-repository: https://github.com/dinko7/jaspr_tailwind/
-issue_tracker: https://github.com/dinko7/jaspr_tailwind/issues
+version: 0.4.0
+repository: https://github.com/shubhamlav/jaspr_tailwind
+issue_tracker: https://github.com/shubhamlav/jaspr_tailwind/issues
 documentation: https://docs.jaspr.site/eco/tailwind
 
 topics:
@@ -18,7 +18,7 @@ environment:
 dependencies:
   build: ">=4.0.0 <6.0.0"
   glob: ^2.1.2
-  package_config: ^2.1.0
+  package_config: ">=2.1.0 <4.0.0"
   path: ^1.8.3
 
 dev_dependencies:
