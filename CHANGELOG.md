@@ -1,3 +1,41 @@
+## 0.4.0
+
+Breaking:
+
+- Supports Tailwind CSS v4 only. A stylesheet with `@tailwind base` or
+  `@tailwind components`, or a v3 CLI, now fails the build with a migration
+  hint.
+- The builder no longer passes `--content` or `--config`. Load a
+  `tailwind.config.js` with `@config` from the stylesheet; the build warns when
+  a config file is not loaded.
+- The `tailwindcss` option is split on spaces into separate CLI arguments (a
+  YAML list also works). 0.3.6 passed it as a single argument.
+- Requires Dart 3.7 or later.
+
+Fixed:
+
+- Installs on Dart 3.13 and later (#19): `build_modules` is gone. It capped the
+  SDK below 3.13 and collided with `build_web_compilers` 4.5.0 and later
+  ("module_library outputs collide").
+- Tailwind CSS v4 builds no longer produce an empty stylesheet.
+- The CLI runs on the stylesheet inside the project, so relative `@import` and
+  `@source` paths and `@plugin "daisyui"` resolve.
+- A missing CLI fails the build with install steps. A CLI error fails it with
+  the CLI's stdout and stderr, and output with no CSS rules fails it too. Before,
+  these passed silently or surfaced as a `PathNotFoundException`.
+
+Added:
+
+- Uses `node_modules/.bin/tailwindcss` from the package when present, then
+  `tailwindcss` on the PATH.
+- `cli` option: `npx`, `standalone`, or the path of a Tailwind CLI.
+- `dart run build_runner build --workspace` support: the package root comes
+  from the package config.
+- Rebuilds when CSS files in `lib/` or `web/`, or files in `content/`, change.
+
+Thanks to @ekrem-qb (#8), @lukehutch (#14), @Markzipan (#18), and @Dimoshka
+(#20), whose pull requests found these problems and shaped this release.
+
 ## 0.3.6
 
 - Transfer ownership

@@ -8,13 +8,28 @@ This package is a first-class tailwind integration for
 
 ## Prerequisites
 
-This package expects tailwind to be installed through the `tailwindcss` command.
-The recommended way is to use the
-[standalone tailwind cli](https://tailwindcss.com/blog/standalone-cli).
+This package runs the [Tailwind CSS v4](https://tailwindcss.com/) command line
+tool. Install it one of two ways.
 
-To install it, download the executable for your platform, preferably the
+### With npm (recommended)
+
+Run this in your project root:
+
+```shell
+npm i -D tailwindcss @tailwindcss/cli
+```
+
+The builder uses `node_modules/.bin/tailwindcss` from your package, or
+`node_modules/.bin/tailwindcss.cmd` on Windows. Add `node_modules/` to your
+`.gitignore`.
+
+### As a standalone binary
+
+Download the
+[standalone tailwind cli](https://tailwindcss.com/blog/standalone-cli) for your
+platform, preferably from the
 [latest release](https://github.com/tailwindlabs/tailwindcss/releases/latest)
-on GitHub and give it executable permissions:
+on GitHub, and give it executable permissions:
 
 ```shell
 curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-<your-platform>
@@ -34,6 +49,13 @@ Test your installation by typing in your terminal:
 tailwindcss -h
 ```
 
+The first line of the output should name version 4.
+
+The builder looks for the CLI in this order: the `cli` option (see
+[Options](#options)), `node_modules/.bin/tailwindcss` in your package, then
+`tailwindcss` on your PATH. If it finds none, the build fails and prints these
+install steps.
+
 ## Setup
 
 To start, add `jaspr_tailwind` as a dev dependency to your project:
@@ -42,19 +64,14 @@ To start, add `jaspr_tailwind` as a dev dependency to your project:
 
 Next add a `styles.tw.css` file inside the `web` directory with the following content:
 
-If you are using tailwindcss v4, then:
-
 ```css title="styles.tw.css"
 @import "tailwindcss";
 ```
 
-Or else, if you are using tailwindcss v3, then:
-
-```css title="styles.tw.css"
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-```
+Tailwind scans your package for class names, starting from the package root, so
+classes in `lib/` and `web/` are found without any config. Relative `@import`
+and `@source` paths resolve from the stylesheet's own folder, as they do in any
+Tailwind project.
 
 Finally, link the generated `styles.css` in your document, or otherwise add it
 to your website:
@@ -95,6 +112,102 @@ You can also have more than one input CSS file. Any file inside the web
 directory ending in `.tw.css` will be used and compiled to its `.css`
 counterpart.
 
+### daisyUI
+
+[daisyUI](https://daisyui.com/) v5 is a Tailwind plugin. Install it with npm:
+
+```shell
+npm i -D daisyui
+```
+
+Then load it in your stylesheet:
+
+```css title="styles.tw.css"
+@import "tailwindcss";
+@plugin "daisyui";
+```
+
+Tailwind loads plugins from `node_modules`, so use the npm route for the CLI
+when you use plugins.
+
+## Options
+
+Set options in your project's `build.yaml`:
+
+```yaml
+targets:
+  $default:
+    builders:
+      jaspr_tailwind:compiler:
+        options:
+          cli: npx
+          tailwindcss: --optimize
+```
+
+- `cli` picks the Tailwind CLI. `npx` runs `@tailwindcss/cli` through npx,
+  `standalone` uses `tailwindcss` from your PATH even when `node_modules` has
+  one, and any other value is the path of a Tailwind CLI. A relative path
+  resolves from your package root, so a pub workspace whose `node_modules` sits
+  at the workspace root can use `cli: ../node_modules/.bin/tailwindcss`.
+- `tailwindcss` holds extra CLI flags, either one string separated by spaces or
+  a YAML list. Release builds pass `--minify` by default.
+
+When the build fails because the CLI is missing or is v3, install or point at a
+v4 CLI, then save a Dart or CSS file (or run `dart run build_runner clean`).
+build_runner keeps a failed result until one of the step's inputs changes, and
+the CLI is not one of them.
+
+## Migrating from Tailwind CSS v3
+
+Version 0.4.0 supports Tailwind CSS v4 only. Follow the
+[Tailwind upgrade guide](https://tailwindcss.com/docs/upgrade-guide), and in
+particular:
+
+- Replace `@tailwind base;`, `@tailwind components;`, and `@tailwind utilities;`
+  with `@import "tailwindcss";`. While `@tailwind base` or
+  `@tailwind components` remains, the build fails with this hint. A stylesheet
+  left with only `@tailwind utilities;` fails because the output has no CSS
+  rules.
+- Install a v4 CLI. A v3 CLI fails the build.
+- The builder no longer passes `tailwind.config.js` to the CLI. Load it from
+  your stylesheet with `@config "../tailwind.config.js";`, or move the theme to
+  CSS with [`@theme`](https://tailwindcss.com/docs/theme). The build warns when
+  it finds a config file that the stylesheet does not load.
+
+## Rebuilding when files change
+
+The CSS is rebuilt when a Dart or CSS file in `lib/` or `web/`, or a file in
+`content/`, changes. build_runner only sees `content/` when it is
+one of the package's sources, so sites built with `jaspr_content` add it in
+`build.yaml`. Setting `sources` replaces build_runner's default list, so list
+the defaults again:
+
+```yaml
+targets:
+  $default:
+    sources:
+      - $package$
+      - assets/**
+      - benchmark/**
+      - bin/**
+      - CHANGELOG*
+      - content/**
+      - example/**
+      - integration_test/**
+      - lib/**
+      - LICENSE*
+      - node/**
+      - pubspec.lock
+      - pubspec.yaml
+      - README*
+      - test/**
+      - tool/**
+      - web/**
+```
+
+Tailwind still picks up classes from other files in your package, but editing
+one of them does not trigger a rebuild on its own.
+
 ---
 
 ## Usage
@@ -134,40 +247,6 @@ class SimpleCard extends StatelessComponent {
 
 ---
 
-## Config
-
-By default, you don't need a tailwind config file for your project. The package
-automatically scans the project's Dart files and builds the CSS. However, if
-you want to customize the default config like the theme or colors, you can add
-a `tailwind.config.js` file to the root directory of your project.
-
-> [!NOTE]
-> Starting from v4, tailwind uses
-> [CSS first configuration](https://tailwindcss.com/blog/tailwindcss-v4#css-first-configuration).
-> Prefer using that for themes and
-> [variables](https://tailwindcss.com/blog/tailwindcss-v4#css-theme-variables).
-
-When using a custom config, you should explicitly set the `content` option to
-scan Tailwind class names from the Dart file:
-
-```javascript
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: ["./{lib,web}/**/*.dart"],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-};
-```
-
-> [!NOTE]
-> Setting a custom content configuration is possible, but the
-> tailwind integration won't recompile the CSS when those files change.
-> Automatic recompiling is only enabled for `.dart` files.
-
----
-
 ## VS Code Setup: Tailwind CSS IntelliSense
 
 To enable Tailwind CSS IntelliSense in VS Code when working with Jaspr/Dart:
@@ -199,8 +278,3 @@ Optionally, reload the extension.
 
 This configuration will enable IntelliSense autocomplete and suggestions for
 Tailwind CSS classes in your Dart/Jaspr files.
-
-> [!NOTE]
-> If you are using tailwindcss v3, then a [config](#config) file is a must
-otherwise the tailwind IntelliSense plugin won't be able to pick up which
-version of tailwind is being used. Also highly suggested to move to v4.
